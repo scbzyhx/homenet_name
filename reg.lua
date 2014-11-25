@@ -1,4 +1,6 @@
 require("os")
+require("luci.model.db")
+
 -- split a string with specific string
 string.split = function(s,p)
 	local rt = {}
@@ -7,25 +9,33 @@ string.split = function(s,p)
 end
 
 -- Is there already specific name
-function isIllegal(localip,srcname,name)
+function isIllegal(mac,localip,srcname,name)
 	--hh = ""..name
+	--more check to name
 	if name == nil then
 		return false
 	end
 	
+	--luci.http.write("What")
 	-- lookup database
-	local file,err = io.open("/tmp/hosts/"..localip,'r')
+	local result,_ = insertRecord(mac,srcname,name,1)
+	if result == false then  return false end
+	--luci.http.write("What happend" )
 	
-	if file == nil then
+	--
+	local file,err = io.open("/tmp/hosts/"..localip,'wr')
+	
+	--if file == nil then
 		--
-		file = io.open("/tmp/hosts/"..localip,"w")
-		file:write(""..localip.." "..srcname.." "..name)
-		file:close()
-		return true
-	end
-	return false
+	--	file = io.open("/tmp/hosts/"..localip,"w")
+	file:write(""..localip.." "..srcname.." "..name)
+	file:close()
+	return true
+	--end
+	--return true
 	
 end
+
 --read pid from /var/dnsmasq.pid and kill -HUP pid
 function reloadDNS()
 	local pid = 0
@@ -78,9 +88,9 @@ end
 function f.handle(self,state,data)
 	if state == FORM_VALID then 
 		-- to check is there a same name
-		if not isIllegal(ip.default,host.default,data.new_name) then
+		if not isIllegal(mac.default,ip.default,host.default,data.new_name) then
 			new_name.default = data.new_name
-			f.errmessage = translate("Error Name: Empty or Duplicate")
+			f.errmessage = translate(data.new_name)--translate("Error Name: Empty or Duplicate")
 			return true
 		end
 		f.message = translate("Name changed OK! Now is <h1>"..data.new_name.."</h1>")

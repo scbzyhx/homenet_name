@@ -49,6 +49,10 @@ function checkName(db,mac,name)
 	local cur = db:execute(cmd)
 	local result = true
 	row = cur:fetch({},'a')
+	if row == nil then
+		result = false
+	end
+	
 	while row do
 		if row.mac ~= mac then
 			result = false
@@ -93,7 +97,9 @@ function insertRecord(mac,nativeName,presentName,onOff)
 	if env == nil or db == nil then
 		return false,"Failed to open DataBase"
 	end
-	
+	nixio.openlog()
+	nixio.syslog("alert","before Exists")
+	nixio.closelog()
 	if isExists(db,mac) then
 		--Sure that presentName is valid
 		if presentName == nil or presentName == "" then
@@ -108,18 +114,22 @@ function insertRecord(mac,nativeName,presentName,onOff)
 		return true, updateHost(db,mac,presentName,onOff)
 	else
 		--check nativeName and presentName
-		if checkName(db,mac,nativeName) and checkName(db,mac,presentName) then
-			return true, insertHost(db,mac,nativeName,presentName,onOff)
+		--if checkName(db,mac,presentName) then
+		if checkName(db,mac,presentName) and  nil ~=  insertHost(db,mac,nativeName,presentName,onOff) then
+			return true, "OK"
+
 			
+		else
+			return false, "New Name is invalid"
 		end
+		
 	end
 	
 	db:close()
 	env:close()
 	
-	
-	
 end
+
 
 
 

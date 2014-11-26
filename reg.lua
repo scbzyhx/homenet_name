@@ -1,5 +1,6 @@
 require("os")
 require("luci.model.db")
+require("nixio")   -- log module of openwrt
 
 -- split a string with specific string
 string.split = function(s,p)
@@ -16,18 +17,11 @@ function isIllegal(mac,localip,srcname,name)
 		return false
 	end
 	
-	--luci.http.write("What")
 	-- lookup database
 	local result,_ = insertRecord(mac,srcname,name,1)
 	if result == false then  return false end
-	--luci.http.write("What happend" )
-	
-	--
 	local file,err = io.open("/tmp/hosts/"..localip,'wr')
 	
-	--if file == nil then
-		--
-	--	file = io.open("/tmp/hosts/"..localip,"w")
 	file:write(""..localip.." "..srcname.." "..name)
 	file:close()
 	return true
@@ -90,7 +84,7 @@ function f.handle(self,state,data)
 		-- to check is there a same name
 		if not isIllegal(mac.default,ip.default,host.default,data.new_name) then
 			new_name.default = data.new_name
-			f.errmessage = translate(data.new_name)--translate("Error Name: Empty or Duplicate")
+			f.errmessage = translate("Error Name("..data.new_name.."): Empty or Duplicate")
 			return true
 		end
 		f.message = translate("Name changed OK! Now is <h1>"..data.new_name.."</h1>")

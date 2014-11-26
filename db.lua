@@ -6,7 +6,7 @@ function connectToDB(dbFile)
 	local env = luasql.sqlite3()
 	local db = env:connect(dbFile,'wr')
 	err = db:execute([[
-	CREATE TABLE if not exists hostRecords (mac TEXT PRIMARY KEY, nativeName TEXT UNIQUE, presentName TEXT UNIQUE, onOff INTERGER);
+	CREATE TABLE if not exists hostRecords (mac TEXT PRIMARY KEY COLLATE NOCASE, nativeName TEXT UNIQUE COLLATE NOCASE, presentName TEXT UNIQUE COLLATE NOCASE, onOff INTERGER);
 	]])
 	
 	return env,db,err
@@ -49,9 +49,10 @@ function checkName(db,mac,name)
 	local cur = db:execute(cmd)
 	local result = true
 	row = cur:fetch({},'a')
-	if row == nil then
-		result = false
-	end
+	
+	--if row == nil then
+	--	result = false
+	--end
 	
 	while row do
 		if row.mac ~= mac then
@@ -97,9 +98,7 @@ function insertRecord(mac,nativeName,presentName,onOff)
 	if env == nil or db == nil then
 		return false,"Failed to open DataBase"
 	end
-	nixio.openlog()
-	nixio.syslog("alert","before Exists")
-	nixio.closelog()
+	--nixio.closelog()
 	if isExists(db,mac) then
 		--Sure that presentName is valid
 		if presentName == nil or presentName == "" then
@@ -113,23 +112,55 @@ function insertRecord(mac,nativeName,presentName,onOff)
 		--So update 
 		return true, updateHost(db,mac,presentName,onOff)
 	else
+		
 		--check nativeName and presentName
 		--if checkName(db,mac,presentName) then
-		if checkName(db,mac,presentName) and  nil ~=  insertHost(db,mac,nativeName,presentName,onOff) then
+		
+			nixio.openlog()
+			if checkName(db,mac,presentName) then
+				nixio.syslog("alert","YHX CHECKNAME TRUE")
+			else
+				nixio.syslog("alert","YHX CHECKNAME FALSE")
+			end
+			nixio.closelog()
+		if checkName(db,mac,presentName) then --and nil ~=insertHost(db,mac,nativeName,presentName,onOff) then
+		 	local inr = insertHost(db,mac,nativeName,presentName,onOff)
+			nixio.openlog()
+			if inr then 
+				nixio.syslog("alert","YHX INSERT TRUE")
+			else
+				nixio.syslog("alert","YHX INSERT FALSE")
+			end
+			nixio.closelog()
 			return true, "OK"
-
-			
 		else
 			return false, "New Name is invalid"
 		end
 		
 	end
-	
 	db:close()
 	env:close()
 	
 end
 
+--get presentName
+function getPresentName(mac)
+	local env,db,err = connectToDB()
+	local cmd = string.format("select presentName from hostRecords where mac = '%s'",mac)
+	local cur = db:execute(cmd)
+	local name
+	row = cur:fetch({},'a')
+	while row do
+		name = row.presentName
+		break
+		--row = cur:fetch(row,'a')
+	end
+	--return name
+	cur:close()
+	db:close()
+	env:close()
+	return name
+end
 
 
 

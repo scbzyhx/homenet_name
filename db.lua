@@ -1,4 +1,4 @@
-require("luasql.sqlite3")
+local luasql = require("luasql.sqlite3")
 local dbfile = "/etc/db/hostdb.db"
 
 function connectToDB(dbFile)

@@ -1,7 +1,8 @@
 LUCIPATH=/usr/lib/lua/luci
 note:
 1.  enable dhcp-script of dnsmasq and point to action.sh
-2.  sqlite3-cli is needed on openwrt
+2.  sqlite3-cli, libsqlite3, luasql-sqlite3 is needed on openwrt
 3.  directory dir is in LUCIPATH/controller/
 4.  db.lua is in  LUCIPATH/model/
 5.  reg.lua is in LUCIPATH/model/cbi/
+6.  pre-mkdir /etc/db

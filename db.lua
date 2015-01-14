@@ -2,6 +2,8 @@
 local modname =...
 
 local luasql = require("luasql.sqlite3")
+--in router, while util in model/, require("luci.model.util")
+--
 local util = require("util")
 
 --local dbfile = "/etc/db/hostdb.db"

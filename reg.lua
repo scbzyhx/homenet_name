@@ -1,5 +1,5 @@
 require("os")
-require("luci.model.db")
+local db = require("luci.model.db")
 require("nixio")   -- log module of openwrt
 
 -- split a string with specific string
@@ -77,7 +77,7 @@ for line in file:lines() do
 	    --nixio.closelog()
 	    mac.default = list[2]
 	    host.default = list[4]
-	    new_name.default = getPresentName(list[2])
+	    new_name.default = db.getPresentName(list[2])
 	    f.errmessage = nil
 	    break
 	--else

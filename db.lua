@@ -4,7 +4,7 @@ local modname =...
 local luasql = require("luasql.sqlite3")
 --in router, while util in model/, require("luci.model.util")
 --
-local util = require("util")
+local util = require("luci.model.util")
 
 --local dbfile = "/etc/db/hostdb.db"
 local MAX_INT = 9876543210  -- may be a smaller integer is OK
@@ -29,9 +29,10 @@ local function connectToDB(dbFile)
 	local env = luasql.sqlite3()
 	local db = env:connect(dbFile,'wr')
 	err = db:execute([[
-	"CREATE TABLE if not exists hostRecords (mac TEXT PRIMARY KEY COLLATE NOCASE, nativeName TEXT UNIQUE COLLATE NOCASE, presentName TEXT UNIQUE COLLATE NOCASE, onOff INTERGER);
+	CREATE TABLE if not exists hostRecords (mac TEXT PRIMARY KEY COLLATE NOCASE, nativeName TEXT UNIQUE COLLATE NOCASE, presentName TEXT UNIQUE COLLATE NOCASE, onOff INTERGER);]])
+	err = db:execute([[
 	CREATE TABLE if not exists speedTable (nw_dst TEXT PRIMARY KEY COLLATE NOCASE, delay INTEGER,ttl INTEGER,bw REAL);
-	"
+	
 	]])
 	
 	return env,db,err
@@ -264,13 +265,19 @@ local function lookup(db,ip)
     local cmd = string.format("SELECT * FROM speedTable WHERE nw_dst = '%s'",ip)
     local cursor,err = db:execute(cmd)
     row = cursor:fetch({},'a')
+    local d = nil
+    local t = nil
+    local b = nil
     -- in fact only one row
     while row do
         --print(string.format("%s %d %d %d",row.nw_dst,row.delay,row.ttl,row.bw))
         --row = cursor:fetch(row,"a")
-        return row.delay,row.ttl,row.bw
+        d,t,b =  row.delay,row.ttl,row.bw
+        break
+
     end
-    return nil
+    cursor:close()
+    return d,t,b
 
 end
 
@@ -293,6 +300,7 @@ local M = {
     delSpeed = delSpeed,
     insert = insert,
     execute = execute,
+    lookup = lookup,
     
     --connectToDB = connectToDB,
     insertHost = insertHost,

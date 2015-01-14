@@ -17,7 +17,7 @@ function isIllegal(mac,localip,srcname,name)
 	
 	-- lookup database
 	name = string.lower(name)
-	local result,_ = insertRecord(mac,srcname,name,1)
+	local result,_ = db.insertRecord(mac,srcname,name,1)
 	if result == false then  return false end
 	local file,err = io.open("/tmp/hosts/"..localip,'wr')
 	

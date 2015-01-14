@@ -1,19 +1,42 @@
-local luasql = require("luasql.sqlite3")
-local dbfile = "/etc/db/hostdb.db"
 
-function connectToDB(dbFile)
+local modname =...
+
+local luasql = require("luasql.sqlite3")
+local util = require("util")
+
+--local dbfile = "/etc/db/hostdb.db"
+local MAX_INT = 9876543210  -- may be a smaller integer is OK
+local MAX_TTL = 256
+--[[
+local function connectToDB(dbFile)
+	dbFile = dbFile or "/etc/db/hostdb.db"
+	local env = luasql.sqlite3()
+	local db = env:connect(dbFile,'wr')
+	err = db:execute(
+	CREATE TABLE if not exists speedTable (nw_dst TEXT PRIMARY KEY COLLATE NOCASE, delay INTEGER,ttl INTEGER,bw REAL);
+	)
+	
+	return env,db,err
+end
+]]--
+--local luasql = require("luasql.sqlite3")
+--local dbfile = "/etc/db/hostdb.db"
+
+local function connectToDB(dbFile)
 	dbFile = dbFile or "/etc/db/hostdb.db"
 	local env = luasql.sqlite3()
 	local db = env:connect(dbFile,'wr')
 	err = db:execute([[
-	CREATE TABLE if not exists hostRecords (mac TEXT PRIMARY KEY COLLATE NOCASE, nativeName TEXT UNIQUE COLLATE NOCASE, presentName TEXT UNIQUE COLLATE NOCASE, onOff INTERGER);
+	"CREATE TABLE if not exists hostRecords (mac TEXT PRIMARY KEY COLLATE NOCASE, nativeName TEXT UNIQUE COLLATE NOCASE, presentName TEXT UNIQUE COLLATE NOCASE, onOff INTERGER);
+	CREATE TABLE if not exists speedTable (nw_dst TEXT PRIMARY KEY COLLATE NOCASE, delay INTEGER,ttl INTEGER,bw REAL);
+	"
 	]])
 	
 	return env,db,err
 end
 
 --insert a record
-function insertHost(db,mac,native,newName,onOff)
+local function insertHost(db,mac,native,newName,onOff)
 	newName = newName or 'NULL'
 	if newName ~= 'NULL' then
 		newName = "'"..newName.."'"
@@ -31,7 +54,7 @@ function insertHost(db,mac,native,newName,onOff)
 end
 
 --update a record
-function updateHost(db,mac,newName,onOff)
+local function updateHost(db,mac,newName,onOff)
 	onOff = onOff or 0
 	local cmd = string.format("UPDATE hostRecords SET presentName = '%s' WHERE mac = '%s'",newName, mac)
 	return db:execute(cmd)
@@ -40,7 +63,7 @@ end
 
 --check a name
 --@return true: OK, false: Not OK
-function checkName(db,mac,name)
+local function checkName(db,mac,name)
 	if name == "" or name == nil then
 		return false
 	end
@@ -69,7 +92,7 @@ function checkName(db,mac,name)
 end
 
 --whether record exists
-function isExists(db,mac)
+local function isExists(db,mac)
 	if mac == "" or mac == nil then
 		return nil
 	end
@@ -88,7 +111,7 @@ end
 
 --insert a record
 --@return: falseName(nil,or "" or )
-function insertRecord(mac,nativeName,presentName,onOff)
+local function insertRecord(mac,nativeName,presentName,onOff)
 	onOff = onOff or 1
 	if mac == nil or mac =="" then
 		return false,"MAC address is invalid"
@@ -144,7 +167,7 @@ function insertRecord(mac,nativeName,presentName,onOff)
 end
 
 --get presentName
-function getPresentName(mac)
+local function getPresentName(mac)
 	local env,db,err = connectToDB()
 	local cmd = string.format("select presentName from hostRecords where mac = '%s'",mac)
 	local cur = db:execute(cmd)
@@ -162,17 +185,125 @@ function getPresentName(mac)
 	return name
 end
 
+local M = {
 
 
+}
+--[[local modname = ...
+--if modname == nil then
+--    db = M
+--else
+    _G[modname] = M
+end
+return M
+]]--
+--
+--delay time : an interger , 1/1000 millisecond
+--           : (0,MAXINT) : delay time ----------in fact it's impossible be such a big number
+--           : -1: NO DATA
+--           : 0: unreachable
+--TTL : integer
+--bw is bandwidth value, REAL , KB/s 
+--
+local function insertSpeed(db,ip,delay,ttl,bw)
+    ttl = ttl or MAX_TTL
+    bw = bw or 0
+    delay = delay or MAX_INT
+    local cmd = string.format("INSERT INTO speedTable VALUES('%s',%d,%d,%f)",ip,delay,ttl,bw)
+    local err = db:execute(cmd)
+    return err
+end
 
---local env,db,err = connectToDB()
+--args is a table, just delay ttl or bw is promised
+local function updateSpeed(db,ip,args)
+    if not util.isValidIP(ip) then
+        print("invalid IP address")
+        return nil
+    end
+    -- table mustn't be empty
+    -- TO 
+    if type(args) ~= 'table' then
+        print("args must be a table")
+    end
+    local delay = args.delay
+    local ttl = args.ttl
+    local bw = args.bw
+    local cmd = "UPDATE speedTable SET "
+    if delay ~= nil then
+        cmd = string.format(cmd.."delay = %d ",delay)
+    end
+    if ttl ~= nil then
+        cmd = string.format(cmd.."ttl = %d ",ttl)
+    end
+    if bw ~= nil then
+        cmd = string.format(cmd.."bw = %f ",bw)
+    end
 
---cur = db:execute("SELECT * FROM hostRecords")
---row = cur:fetch({},"a")
---while row do
---	print(string.format("mac = %s, nativeName = %s, presentName = %s, onOff = %d",row.mac,row.nativeName,row.presentName or 'NULL',row.onOff))
---	row = cur:fetch(row,"a")
---end
---cur:close()
---db:close()
---env:close()
+    cmd = string.format(cmd .. "WHERE ip = '%s'",ip)
+    return db:execute(cmd)
+
+end
+local function delSpeed(db,ip)
+    if not util.isValid(ip) then
+        print("invalide IP address")
+        return nil
+    end
+    local cmd = string.format("delete from speedTable where ip = '%s'",ip)
+    return db:execute(cmd)
+end
+local function execute(db,cmd)
+    return db:execute(cmd)
+end
+local function lookup(db,ip)
+    --env,db,err = connectToDB()
+    if lookup == nil or db == nil or util.isValidIP(ip) == false then
+        print("invalid IP address or didn't connect to database")
+    end
+    local cmd = string.format("SELECT * FROM speedTable WHERE nw_dst = '%s'",ip)
+    local cursor,err = db:execute(cmd)
+    row = cursor:fetch({},'a')
+    -- in fact only one row
+    while row do
+        --print(string.format("%s %d %d %d",row.nw_dst,row.delay,row.ttl,row.bw))
+        --row = cursor:fetch(row,"a")
+        return row.delay,row.ttl,row.bw
+    end
+    return nil
+
+end
+
+local function insert(ip,delay,ttl,bw)
+    local env,db,err = connectToDB('tmp.db')
+    insertSpeed(db,ip,delay,ttl,bw)
+    db:close()
+    env:close()
+end
+
+--test
+--insert("192.168.1.1",1,1,1)
+--env,db,err = connectToDB('tmp.db')
+--print(lookup(db,'192.168.1.1'))
+
+local M = {
+    connectToDB = connectToDB,
+    insertSpeed = insertSpeed,
+    updateSpeed = updateSpeed,
+    delSpeed = delSpeed,
+    insert = insert,
+    execute = execute,
+    
+    --connectToDB = connectToDB,
+    insertHost = insertHost,
+    updateHost = updateHost,
+    checkName = checkName,
+    isExists = isExists,
+    insertRecord = insertRecord,
+    getPresentName = getPresentName
+}
+if modname == nil then
+    spdb = M
+else
+    _G[modname] = M
+end
+
+return M

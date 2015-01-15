@@ -227,22 +227,27 @@ local function updateSpeed(db,ip,args)
     -- TO 
     if type(args) ~= 'table' then
         print("args must be a table")
+        return nil
     end
     local delay = args.delay
     local ttl = args.ttl
     local bw = args.bw
+    if ttl == nil and delay == nil and bw == nil then
+        print("No update")
+        return nil
+    end
     local cmd = "UPDATE speedTable SET "
     if delay ~= nil then
-        cmd = string.format(cmd.."delay = %d ",delay)
+        cmd = string.format(cmd.."delay = %d ,",delay)
     end
     if ttl ~= nil then
-        cmd = string.format(cmd.."ttl = %d ",ttl)
+        cmd = string.format(cmd.."ttl = %d ,",ttl)
     end
     if bw ~= nil then
-        cmd = string.format(cmd.."bw = %f ",bw)
+        cmd = string.format(cmd.."bw = %f ,",bw)
     end
-
-    cmd = string.format(cmd .. "WHERE ip = '%s'",ip)
+    cmd = string.sub(cmd,1,-2)
+    cmd = string.format(cmd .. "WHERE nw_dst = '%s'",ip)
     return db:execute(cmd)
 
 end

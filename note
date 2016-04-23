@@ -1,6 +1,6 @@
 LUCIPATH=/usr/lib/lua/luci
 note:
-1.  enable dhcp-script of dnsmasq and point to action.sh
+1.  enable dhcp-script of dnsmasq and point to action.sh -> add dhcp-script=PATH/action.sh in /etc/dnsmasq.conf
 2.  sqlite3-cli, libsqlite3, luasql-sqlite3 is needed on openwrt
 3.  directory dir is in LUCIPATH/controller/
 4.  db.lua is in  LUCIPATH/model/
